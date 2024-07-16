@@ -17,6 +17,7 @@ Before you begin, ensure you have met the following requirements:
 - Python 3.6+
 - Chrome browser installed
 - ChromeDriver (compatible with your Chrome version)
+  > Stable versions of ChromeDriver for your OS can be found [here](https://googlechromelabs.github.io/chrome-for-testing/#stable).
 
 ## Installation
 
