@@ -5,7 +5,7 @@ This Python script allows you to download all images from a Poe chat conversatio
 ## Features
 
 - Automated login to Poe using email verification
-- Scrolls through entire chat history to find all images
+- Scrolls through entire chat history to find all images, chats, or creator earnings
 - Concurrent downloading of images for improved speed
 - Handles duplicate images using MD5 hashing
 - Detailed logging for easy troubleshooting
@@ -23,8 +23,8 @@ Before you begin, ensure you have met the following requirements:
 1. Clone this repository:
 
    ```
-   git clone https://github.com/frontboat/poe-image-downloader.git
-   cd poe-image-downloader
+   git clone https://github.com/JohnSmith-132/poe-export-tools.git
+   cd poe-export-tools
    ```
 
 2. Install the required Python packages:
