@@ -1,4 +1,4 @@
-# Poe Chat Image Downloader
+# Poe Export Tools
 
 These Python scripts allows you to download your history or Creator earnings from Poe. It automates the process of logging in to Poe, navigating to a specific chat URL, scrolling through the chat history or tabs, and downloading + formatting the relevant info.
 
