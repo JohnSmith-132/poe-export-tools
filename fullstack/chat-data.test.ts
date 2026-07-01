@@ -25,6 +25,65 @@ describe("parseChatMessages", () => {
     ]);
   });
 
+  test("parses full Poe query request JSON exports", () => {
+    const result = parseChatMessages(
+      JSON.stringify({
+        version: "1.1",
+        type: "query",
+        conversation_id: "c-test",
+        user_id: "u-test",
+        message_id: "r-test",
+        bot_query_id: "b-test",
+        query: [
+          {
+            role: "bot",
+            sender_id: "ImageBot",
+            sender: { id: null, name: "ImageBot" },
+            content: "![cat](https://example.test/cat.png)",
+            content_type: "text/markdown",
+            timestamp: 1782898400605901,
+            message_id: "m-bot",
+            feedback: [],
+            attachments: [
+              {
+                name: "cat.png",
+                content_type: "image/png",
+                url: "https://example.test/cat.png",
+                parsed_content: "a cat",
+              },
+            ],
+            metadata: null,
+            reactions: [],
+          },
+          {
+            role: "user",
+            sender_id: "u-test",
+            sender: { id: "u-test", name: null },
+            content: "save this",
+            content_type: "text/markdown",
+            timestamp: 178289840627193,
+            message_id: "m-user",
+            attachments: [],
+          },
+        ],
+      })
+    );
+
+    expect(result.error).toBeNull();
+    expect(result.messages).toEqual([
+      {
+        role: "bot",
+        text: "![cat](https://example.test/cat.png)",
+        attachments: ["https://example.test/cat.png"],
+      },
+      {
+        role: "human",
+        text: "save this",
+        attachments: [],
+      },
+    ]);
+  });
+
   test("parses Poe next-data chatShare messages arrays", () => {
     const result = parseChatMessages(
       JSON.stringify({

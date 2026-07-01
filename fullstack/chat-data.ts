@@ -45,6 +45,9 @@ type PoeNextData = {
 
 type ExportAttachment = {
   url?: string;
+  file?: {
+    url?: string;
+  };
 };
 
 type ExportMessage = {
@@ -55,6 +58,7 @@ type ExportMessage = {
 
 type ExportData = {
   messages?: ExportMessage[];
+  query?: ExportMessage[];
 };
 
 type JsonParseResult =
@@ -118,7 +122,8 @@ function parseJsonChatMessages(data: unknown): ChatParseResult {
     };
   }
 
-  const exportMessages = (data as ExportData)?.messages;
+  const exportData = data as ExportData;
+  const exportMessages = exportData.messages ?? exportData.query;
   if (Array.isArray(exportMessages)) {
     return {
       messages: exportMessages.map((message) => ({
@@ -160,7 +165,7 @@ function collectExportAttachmentUrls(attachments: ExportAttachment[] | undefined
   const urls: string[] = [];
   const seen = new Set<string>();
   for (const attachment of attachments) {
-    appendUrl(urls, seen, attachment?.url);
+    appendUrl(urls, seen, attachment?.file?.url ?? attachment?.url);
   }
 
   return urls;
