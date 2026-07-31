@@ -225,6 +225,33 @@ const routes: Record<string, unknown> = {
     "User-agent: *\nAllow: /\nSitemap: https://export.tools/sitemap.xml\n",
     { headers: { "Content-Type": "text/plain" } }
   ),
+  "/llms.txt": new Response(
+    `# export.tools
+
+> Free, client-side exporter for poe.com conversations. Load a Poe chat export (or a public poe.com share link) to view the conversation and download every message, image, video, and file as a single zip built entirely in the browser.
+
+## How it works
+
+1. Tag @export-chat, @savechats, or @SaveThisChat in the Poe conversation you want to save.
+2. Download the transcript file (.md or .json) the bot returns.
+3. Upload that file at https://export.tools/ to view the chat and bundle the transcript plus all attachments into a zip. Nothing is stored server-side.
+
+As a fallback, paste a public share link of the form https://poe.com/s/<share-id> into the input at the top of the page.
+
+## Key links
+
+- [Home](https://export.tools/): upload a Poe transcript or paste a poe.com share link
+- [Share API](https://export.tools/api/share?url=<poe-share-url>): JSON endpoint returning attachment URLs and the raw __NEXT_DATA__ payload for a public https://poe.com/s/<share-id> link
+
+## Agent tools (WebMCP)
+
+- load_poe_share: declarative form tool — fill the share_url field with a https://poe.com/s/<share-id> URL and submit to load the conversation
+- list_attachments: read-only; returns JSON describing the loaded chat (source file, message count, attachment URLs)
+- download_attachments_zip: downloads the loaded transcript and all attachments as one zip
+- set_view_mode: switches between the attachment grid view and the chat transcript view
+`,
+    { headers: { "Content-Type": "text/plain; charset=utf-8" } }
+  ),
   "/sitemap.xml": new Response(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>https://export.tools/</loc>\n    <lastmod>${siteLastMod}</lastmod>\n  </url>\n</urlset>\n`,
     { headers: { "Content-Type": "application/xml" } }

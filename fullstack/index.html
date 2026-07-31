@@ -64,10 +64,17 @@
         type="button"
         aria-label="Upload chat export"
       ></button>
-      <form id="share-form" class="share-form" autocomplete="off">
+      <form
+        id="share-form"
+        class="share-form"
+        autocomplete="off"
+        toolautosubmit
+        toolname="load_poe_share"
+        tooldescription="Load a public poe.com share link to view the conversation and its attachments. Use when the user provides a Poe share URL of the form https://poe.com/s/<share-id>."
+      >
         <input
           id="share-url"
-          name="share-url"
+          name="share_url"
           class="prompt-input"
           type="url"
           inputmode="url"
@@ -75,6 +82,7 @@
           spellcheck="false"
           placeholder="poe.com/s/<id>…"
           aria-label="Poe share url"
+          toolparamdescription="The Poe share URL to load, in the form https://poe.com/s/<share-id>"
         />
       </form>
       <div class="menu-anchor">

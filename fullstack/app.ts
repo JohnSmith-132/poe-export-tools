@@ -69,9 +69,40 @@ type SourceFile = {
   type: string;
 };
 
+// WebMCP APIs (Chrome 150+ origin trial) — not yet in lib.dom.
+type ModelContextTool = {
+  name: string;
+  description: string;
+  inputSchema: {
+    type: "object";
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
+  annotations?: { readOnlyHint?: boolean; untrustedContentHint?: boolean };
+  execute: (params: Record<string, unknown>) => string | Promise<string>;
+};
+
+declare global {
+  interface Document {
+    modelContext?: {
+      registerTool: (
+        tool: ModelContextTool,
+        options?: { signal?: AbortSignal; exposedTo?: string[] }
+      ) => Promise<void>;
+    };
+  }
+  interface SubmitEvent {
+    agentInvoked?: boolean;
+    respondWith?: (result: Promise<unknown>) => void;
+  }
+}
+
+// WebMCP: never mutate the share form's fields here. The browser derives the
+// declarative load_poe_share tool definition from the form, and changing a
+// field (e.g. toggling `disabled`) mid-fetch cancels the in-flight agent tool
+// call with "tool definition was updated". Re-entry is guarded in fetchShare.
 function setLoading(loading: boolean) {
   isLoading = loading;
-  if (input) input.disabled = loading;
   updateHeaderState();
 }
 
@@ -534,18 +565,20 @@ function renderImageViewer() {
   if (viewerNext) viewerNext.disabled = !hasMultipleImages;
 }
 
-async function fetchShare() {
-  if (!input) return;
+async function fetchShare(): Promise<string> {
+  if (!input) return "Share input unavailable.";
+  if (isLoading) return "A share URL is already loading — wait for it to finish.";
   const shareUrl = input.value.trim();
 
   if (!shareUrl) {
-    return;
+    return "No share URL entered.";
   }
 
   const normalized = normalizeShareUrl(shareUrl);
   if (!normalized) {
-    setError("Invalid share URL. Expected https://poe.com/s/<share-id>.");
-    return;
+    const message = "Invalid share URL. Expected https://poe.com/s/<share-id>.";
+    setError(message);
+    return message;
   }
 
   if (input) input.value = normalized;
@@ -565,15 +598,16 @@ async function fetchShare() {
       data = await response.json();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      setError(`Failed to read server response: ${message}`);
-      return;
+      const status = `Failed to read server response: ${message}`;
+      setError(status);
+      return status;
     }
     const payload = data as { urls?: unknown; nextData?: unknown; error?: unknown };
 
     if (!response.ok) {
       const message = typeof payload?.error === "string" ? payload.error : "Request failed.";
       setError(message);
-      return;
+      return message;
     }
 
     const fallbackUrls = Array.isArray(payload?.urls)
@@ -585,16 +619,19 @@ async function fetchShare() {
     const url = new URL(window.location.href);
     url.searchParams.set("url", normalized);
     window.history.replaceState({}, "", url.toString());
+    return `Loaded ${chatMessages.length} message(s) and ${urls.length} attachment(s) from ${normalized}.`;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    setError(`Request failed: ${message}`);
+    const status = `Request failed: ${message}`;
+    setError(status);
+    return status;
   } finally {
     setLoading(false);
   }
 }
 
-async function downloadAll() {
-  if (urls.length === 0 && !sourceFile) return;
+async function downloadAll(): Promise<string | null> {
+  if (urls.length === 0 && !sourceFile) return null;
   if (menuDownload) menuDownload.disabled = true;
   const filename = formatGalleryZipName(new Date());
 
@@ -632,9 +669,11 @@ async function downloadAll() {
     link.click();
     link.remove();
     URL.revokeObjectURL(blobUrl);
+    return filename;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     setError(`Download failed: ${message}`);
+    return null;
   } finally {
     if (menuDownload) menuDownload.disabled = false;
   }
@@ -642,7 +681,14 @@ async function downloadAll() {
 
 form?.addEventListener("submit", (event) => {
   event.preventDefault();
-  void fetchShare();
+  const result = fetchShare();
+  // WebMCP: when an agent invoked the declarative load_poe_share tool,
+  // resolve the tool call with the load outcome instead of leaving it hanging.
+  if (event.agentInvoked && event.respondWith) {
+    event.respondWith(result);
+    return;
+  }
+  void result;
 });
 
 input?.addEventListener("input", () => {
@@ -803,6 +849,80 @@ viewerStage?.addEventListener("touchend", (event) => {
   if (Math.abs(delta) < 40) return;
   showViewerImage(delta > 0 ? -1 : 1);
 });
+
+// Agent-facing tools (WebMCP imperative API). The share form registers
+// `load_poe_share` declaratively via its toolname/tooldescription attributes;
+// these cover the actions that aren't forms.
+const modelContext = document.modelContext;
+if (modelContext) {
+  void modelContext.registerTool({
+    name: "list_attachments",
+    description:
+      "List the state of the currently loaded Poe chat export: source file name, message count, attachment count, and the first attachment URLs. Returns JSON. Use after loading a share URL or uploading a transcript to see what the page contains.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    execute: () => {
+      // Keep output within the ~1.5K character budget recommended for tools.
+      const maxListed = 6;
+      return JSON.stringify({
+        loaded: hasContent(),
+        source: sourceFile?.name ?? null,
+        messageCount: chatMessages.length,
+        attachmentCount: urls.length,
+        attachmentUrls: urls.slice(0, maxListed),
+        ...(urls.length > maxListed
+          ? {
+              note: `${urls.length - maxListed} more attachment URL(s) omitted; use download_attachments_zip to fetch everything.`,
+            }
+          : {}),
+      });
+    },
+  });
+
+  void modelContext.registerTool({
+    name: "download_attachments_zip",
+    description:
+      "Build a zip containing the loaded chat transcript plus every attachment and download it to the user's device. Requires a chat to be loaded first (via the load_poe_share form or a transcript upload).",
+    inputSchema: { type: "object", properties: {} },
+    async execute() {
+      if (urls.length === 0 && !sourceFile) {
+        return "Nothing to download — load a Poe share URL or upload a transcript first.";
+      }
+      const filename = await downloadAll();
+      return filename
+        ? `Started download of ${filename} (${urls.length} attachment(s) plus the source transcript).`
+        : `Download failed: ${notice?.textContent || "unknown error"}`;
+    },
+  });
+
+  void modelContext.registerTool({
+    name: "set_view_mode",
+    description:
+      "Switch the loaded conversation between the attachment grid view and the chat transcript view.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        view: {
+          type: "string",
+          enum: ["grid", "chat"],
+          description: "Which view to show: 'grid' (attachments) or 'chat' (transcript).",
+        },
+      },
+      required: ["view"],
+    },
+    execute: (params) => {
+      const view = params["view"];
+      if (view !== "grid" && view !== "chat") {
+        return 'Invalid view — use "grid" or "chat".';
+      }
+      if (view === "chat" && chatMessages.length === 0) {
+        return "Chat view unavailable — the loaded export has no parsed messages.";
+      }
+      setViewMode(view);
+      return `Now showing the ${view} view.`;
+    },
+  });
+}
 
 const params = new URLSearchParams(window.location.search);
 const initialUrl = params.get("url");
