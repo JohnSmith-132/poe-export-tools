@@ -56,7 +56,7 @@ On Poe, open the chat menu and tap **Share entire chat** to copy a `https://poe.
 
 ### Installation
 
-1. Clone the repo
+1. Clone the repo (boat maintains most actively)
    ```sh
    git clone https://github.com/frontboat/poe-export-tools.git
    ```
