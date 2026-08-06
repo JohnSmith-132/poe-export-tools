@@ -1,0 +1,11 @@
+.git
+.gitignore
+node_modules
+.DS_Store
+*.swp
+*.log
+.env
+.env.*
+fullstack
+Dockerfile
+.dockerignore

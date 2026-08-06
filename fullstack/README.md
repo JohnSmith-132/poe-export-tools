@@ -1,10 +1,10 @@
 # fullstack
 
-Small Bun fullstack app to extract attachment image URLs from Poe share links.
+Small Bun fullstack app to extract attachment URLs from Poe share links and Poe chat export files.
 
 ## How it works
 
-- `/` serves a minimal UI where you paste a Poe share URL and press Enter.
+- `/` serves a minimal UI where you paste a Poe share URL and press Enter, or upload a Poe chat export `.json` or `.md` file.
 - `/api/share?url=...` fetches the share HTML and extracts attachment URLs from `__NEXT_DATA__`.
 - The browser downloads attachments directly and builds a zip locally with client-zip.
 

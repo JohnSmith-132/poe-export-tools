@@ -1,6 +1,6 @@
 {
   "name": "export.tools",
-  "short_name": "Gallery",
+  "short_name": "export.tools",
   "icons": [
     {
       "src": "/static/webappmanifestsmall.png",
